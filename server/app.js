@@ -14,14 +14,20 @@ const processMessage = (req, res, next) => {
   logger.info(`Request received for image. Gmail threadId ${id}. x-forwarded-for: ${req.headers['x-forwarded-for']}, remoteAddr: ${req.connection.remoteAddress}`);
   try {
     let messages = JSON.parse(fs.readFileSync(`${__dirname}/data/messages.json`, 'utf8'));
-
+    let knownClients = JSON.parse(fs.readFileSync(`${__dirname}/data/knownClients.json`, 'utf8'));
+    if(knownClients[ip] && knownClients[ip].lastRegister) {
+      const lastRegister = new Date(knownClients[ip].lastRegister);
+      const sinceLastRegister = Math.abs(now - lastRegister) / 1000;
+      if(sinceLastRegister < 5)
+        return next();
+    }
     const now = new Date(Date.now());
     if (messages[id] && messages[id].lastUpdated) {
       logger.info(`Message tracking record found`);
       const lastUpdated = new Date(messages[id].lastUpdated);
-      const minSinceLast = Math.abs(now - lastUpdated) / 1000;
-      if (minSinceLast > 1) {
-        logger.info(`More than 1 minutes since last view, incrementing count`);
+      const secSince = Math.abs(now - lastUpdated) / 1000;
+      if (secSince > 15) {
+        logger.info(`More than 15 seconds since last view, incrementing count`);
         messages[id].count += 1;
         const exists = messages[id].viewedIps.find(x => x.ip === ip && x.userAgent === userAgent);
         if (!exists) messages[id].viewedIps.push({ ip, userAgent });
@@ -43,11 +49,8 @@ const registerClient = (req, res, next) => {
     let knownClients = JSON.parse(fs.readFileSync(`${__dirname}/data/knownClients.json`, 'utf8'));
     const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
     const userAgent = req.headers['user-agent'];
-    const existing = knownClients.find(k => k.ip === ip && k.userAgent === userAgent);
-    if (!existing) {
-      knownClients.push({ ip, userAgent });
-      fs.writeFileSync(`${__dirname}/data/knownClients.json`, JSON.stringify(knownClients), 'utf8');
-    }
+    knownClients[ip] = { userAgent, lastRegister: new Date(Date.now()).toISOString() };
+    fs.writeFileSync(`${__dirname}/data/knownClients.json`, JSON.stringify(knownClients), 'utf8');
   }
   catch (e) { next(e) }
   return next();
