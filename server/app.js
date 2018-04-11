@@ -7,10 +7,17 @@ const app = express();
 const port = 3189;
 const logger = bunyan.createLogger({ name: 'gmail-tracker' });
 app.set('trust proxy');
+
+const parseUserAgent = (userAgent) => {
+  const start = userAgent.indexOf('(');
+  const end = userAgent.indexOf(')');
+  return userAgent.substr(start, end);
+}
+
 const processMessage = (req, res, next) => {
   const { id } = req.query;
   const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-  const userAgent = req.headers['user-agent'];
+  const userAgent = parseUserAgent(req.headers['user-agent']);
   logger.info(`Request received for image. Gmail threadId ${id}. x-forwarded-for: ${req.headers['x-forwarded-for']}, remoteAddr: ${req.connection.remoteAddress}`);
   try {
     let messages = JSON.parse(fs.readFileSync(`${__dirname}/data/messages.json`, 'utf8'));
@@ -29,14 +36,14 @@ const processMessage = (req, res, next) => {
       if (secSince > 15) {
         logger.info(`More than 15 seconds since last view, incrementing count`);
         messages[id].count += 1;
-        const exists = messages[id].viewedIps.find(x => x.ip === ip && x.userAgent === userAgent);
-        if (!exists) messages[id].viewedIps.push({ ip, userAgent });
+        messages[id].lastViewedIp = ip;
+        messages[id].lastViewedClient = userAgent;
         messages[id].lastUpdated = now.toISOString();
       }
     }
     else {
       logger.info(`No record found. First time request for threadId ${id}`)
-      messages[id] = { count: 0, lastUpdated: now.toISOString(), initialRequest: { ip, userAgent }, viewedIps: [] }
+      messages[id] = { count: 0, lastUpdated: now.toISOString(), lastViewedIp: ip, lastViewedClient: userAgent }
     }
     fs.writeFileSync(`${__dirname}/data/messages.json`, JSON.stringify(messages), 'utf8');
     return next();
@@ -48,7 +55,7 @@ const registerClient = (req, res, next) => {
   try {
     let knownClients = JSON.parse(fs.readFileSync(`${__dirname}/data/knownClients.json`, 'utf8'));
     const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-    const userAgent = req.headers['user-agent'];
+    const userAgent = parseUserAgent(req.headers['user-agent']);
     knownClients[ip] = { userAgent, lastRegister: new Date(Date.now()).toISOString() };
     fs.writeFileSync(`${__dirname}/data/knownClients.json`, JSON.stringify(knownClients), 'utf8');
   }
