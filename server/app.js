@@ -7,9 +7,11 @@ const app = express();
 const port = 3189;
 const logger = bunyan.createLogger({name: 'gmail-tracker'});
 app.set('trust proxy');
-const processMessage = (req, res, next) => {
-  const { id, ip } = req.query; 
-  const viewedIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+const processMessage = (req, res, next) => {  
+  const { id } = req.query; 
+  const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+  const userAgent = req.headers['user-agent'];
+  logger.info(`Request received for image. Gmail threaId ${id} - `);
   try {
     let messages = JSON.parse(fs.readFileSync(`${__dirname}/data/messages.json`, 'utf8'));
     const now = new Date(Date.now());
@@ -18,11 +20,12 @@ const processMessage = (req, res, next) => {
       const minSinceLast = Math.abs(now - lastUpdated) / 1000;
       if(minSinceLast > 1) {
         messages[id].count += 1;
-        if(!messages[id].viewedIps.includes(viewedIp)) messages[id].viewedIps.push(viewedIp);
+        const exists = messages[id].viewedIps.find(x => x.ip === ip && x.userAgent === userAgent);
+        if(!messages[id].viewedIps.some(ip)) messages[id].viewedIps.push(ip);
         messages[id].lastUpdated = now.toISOString();
       }
     }
-    else messages[id] = { count: 0, lastUpdated: now.toISOString(), initialRequest: ip, viewedIps: [] }
+    else messages[id] = { count: 0, lastUpdated: now.toISOString(), initialRequest: { ip, userAgent }, viewedIps: [] }
     fs.writeFileSync(`${__dirname}/data/messages.json`, JSON.stringify(messages), 'utf8');
     return next();
   }
