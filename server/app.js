@@ -18,7 +18,7 @@ const processMessage = (req, res, next) => {
     if(knownClients[ip] && knownClients[ip].lastRegister) {
       const lastRegister = new Date(knownClients[ip].lastRegister);
       const sinceLastRegister = Math.abs(now - lastRegister) / 1000;
-      if(sinceLastRegister < 5)
+      if(sinceLastRegister < 15)
         return next();
     }
     const now = new Date(Date.now());
