@@ -1,0 +1,26 @@
+{
+  "name": "gmail_tracking",
+  "version": "1.0.0",
+  "description": "App Server for Gmail Tracking",
+  "main": "app.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jfierstein/gmail_tracking/gmail_tracking.git"
+  },
+  "author": "jfierstein",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jfierstein/gmail_tracking/issues"
+  },
+  "homepage": "https://github.com/jfierstein/gmail_tracking/",
+  "scripts": {
+    "start": "node server/app.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "app-module-path": "^2.2.0",
+    "bunyan": "^1.8.10",
+    "ddos": "^0.1.28",
+    "express": "^4.15.2"
+  }
+}
