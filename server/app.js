@@ -8,8 +8,8 @@ const port = 3189;
 const logger = bunyan.createLogger({name: 'gmail-tracker'});
 app.set('trust proxy');
 const processMessage = (req, res, next) => {
-  const { id } = req.query; 
-  const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+  const { id, ip } = req.query; 
+  const viewedIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
   try {
     let messages = JSON.parse(fs.readFileSync(`${__dirname}/data/messages.json`, 'utf8'));
     const now = new Date(Date.now());
@@ -18,11 +18,11 @@ const processMessage = (req, res, next) => {
       const minSinceLast = Math.abs(now - lastUpdated) / 1000;
       if(minSinceLast > 1) {
         messages[id].count += 1;
-        if(!messages[id].ips.includes(ip)) messages[id].ips.push(ip);
+        if(!messages[id].viewedIps.includes(viewedIp)) messages[id].viewedIps.push(viewedIp);
         messages[id].lastUpdated = now.toISOString();
       }
     }
-    else messages[id] = { count: 0, lastUpdated: now.toISOString(), ips: [ip] }
+    else messages[id] = { count: 0, lastUpdated: now.toISOString(), initialRequest: ip, viewedIps: [] }
     fs.writeFileSync(`${__dirname}/data/messages.json`, JSON.stringify(messages), 'utf8');
     return next();
   }
