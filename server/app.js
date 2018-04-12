@@ -4,7 +4,7 @@ const express = require('express');
 const bunyan = require('bunyan');
 const fs = require('fs');
 const app = express();
-const port = 3189;
+const port = process.env.PORT || 3189;
 const logger = bunyan.createLogger({ name: 'gmail-tracker' });
 app.set('trust proxy');
 
