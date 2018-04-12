@@ -9,8 +9,8 @@ const logger = bunyan.createLogger({ name: 'gmail-tracker' });
 app.set('trust proxy');
 
 const parseUserAgent = (userAgent) => {
-  const start = userAgent.indexOf('(');
-  const end = userAgent.indexOf(')');
+  const start = userAgent.indexOf("(");
+  const end = userAgent.indexOf(")");
   return userAgent.substr(start, end);
 }
 
