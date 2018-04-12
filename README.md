@@ -25,9 +25,11 @@ Whenever the e-mail is opened, the browser will attempt to fetch the image from 
 ## Run with Docker
 
 `docker build -t gmail-tracking .`
+
 `docker run -d -p 3189:3189 --name gmail-tracking gmail-tracking`
 
 ## Run with latest NodeJS
 
 `yarn install`
+
 `npm start`
