@@ -20,6 +20,7 @@ const processMessage = (req, res, next) => {
   const userAgent = parseUserAgent(req.headers['user-agent']);
   logger.info(`Request received for image. Gmail threadId ${id}. x-forwarded-for: ${req.headers['x-forwarded-for']}, remoteAddr: ${req.connection.remoteAddress}`);
   try {
+    const now = new Date(Date.now());
     let messages = JSON.parse(fs.readFileSync(`${__dirname}/data/messages.json`, 'utf8'));
     let knownClients = JSON.parse(fs.readFileSync(`${__dirname}/data/knownClients.json`, 'utf8'));
     if(knownClients[ip] && knownClients[ip].lastRegister) {
@@ -27,8 +28,7 @@ const processMessage = (req, res, next) => {
       const sinceLastRegister = Math.abs(now - lastRegister) / 1000;
       if(sinceLastRegister < 15)
         return next();
-    }
-    const now = new Date(Date.now());
+    }    
     if (messages[id] && messages[id].lastUpdated) {
       logger.info(`Message tracking record found`);
       const lastUpdated = new Date(messages[id].lastUpdated);
