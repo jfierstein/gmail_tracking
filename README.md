@@ -28,7 +28,7 @@ Whenever the e-mail is opened, the browser will attempt to fetch the image from 
 
 `docker run --name gmail-tracking -d -p 3189:3189 -v /docker/gmail_tracking/data/:/server/data gmail-tracking`
 
-`echo "{}" > server/datathreads.json`
+`echo "{}" > server/data/threads.json`
 
 ## Run with latest NodeJS
 
