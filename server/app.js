@@ -45,21 +45,22 @@ const processMessage = (req, res, next) => {
 const register = async (req, res, next) => {
   const { id } = req.query;
   const timestamp = new Date(Date.now());
-  setTimeout((threadId, timestamp) => {
+  setTimeout((id, timestamp) => {
     try {
       const threads = JSON.parse(fs.readFileSync(`${__dirname}/data/threads.json`, 'utf8'));
       if (threads[id] && threads[id].length) {
         const length = threads[id].length;
         const lastView = threads[id][length - 1];
         const lastViewTimestamp = new Date(lastView.timestamp);
-        const sinceRegister = Math.abs(registerTimestamp - lastViewTimestamp) / 1000;
+        const sinceRegister = Math.abs(timestamp - lastViewTimestamp) / 1000;
+        logger.info(`Last view record logged ${sinceRegister} sec after the register call`)
         //if the last timestamp was less than 10 seconds since the last register call, remove it
         if (sinceRegister < 10) threads[id].pop();
         fs.writeFileSync(`${__dirname}/data/threads.json`, JSON.stringify(threads), 'utf8');
       }
     }
     catch (e) { next(e) }
-  }, 5000);
+  }, 2000);
   return next();
 }
 
