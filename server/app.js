@@ -20,49 +20,61 @@ const processMessage = (req, res, next) => {
   const userAgent = parseUserAgent(req.headers['user-agent']);
   logger.info(`Request received for image. Gmail threadId ${id}. x-forwarded-for: ${req.headers['x-forwarded-for']}, remoteAddr: ${req.connection.remoteAddress}`);
   try {
-    const now = new Date(Date.now());
-    let messages = JSON.parse(fs.readFileSync(`${__dirname}/data/messages.json`, 'utf8'));
-    let knownClients = JSON.parse(fs.readFileSync(`${__dirname}/data/knownClients.json`, 'utf8'));
-    if(knownClients[ip] && knownClients[ip].lastRegister) {
-      const lastRegister = new Date(knownClients[ip].lastRegister);
-      const sinceLastRegister = Math.abs(now - lastRegister) / 1000;
-      if(sinceLastRegister < 15)
-        return next();
-    }    
-    if (messages[id] && messages[id].lastUpdated) {
-      logger.info(`Message tracking record found`);
-      const lastUpdated = new Date(messages[id].lastUpdated);
-      const secSince = Math.abs(now - lastUpdated) / 1000;
-      if (secSince > 15) {
-        logger.info(`More than 15 seconds since last view, incrementing count`);
-        messages[id].count += 1;
-        messages[id].lastViewedIp = ip;
-        messages[id].lastViewedClient = userAgent;
-        messages[id].lastUpdated = now.toISOString();
+    const timestamp = new Date(Date.now());
+    let threads = JSON.parse(fs.readFileSync(`${__dirname}/data/threads.json`, 'utf8'));
+    if (threads[id]) {
+      const length = threads[id].length;
+      if (length > 0) {
+        const lastView = threads[id][length - 1];
+        const lastTimestamp = new Date(lastView.timestamp);
+        const secSince = Math.abs(timestamp - lastTimestamp) / 1000;
+        if (secSince > 15) threads[id].push({ ip, userAgent, timestamp: timestamp.toISOString() });
       }
+      else threads[id].push({ ip, userAgent, timestamp: timestamp.toISOString() });
     }
     else {
       logger.info(`No record found. First time request for threadId ${id}`)
-      messages[id] = { count: 0, lastUpdated: now.toISOString(), lastViewedIp: ip, lastViewedClient: userAgent }
+      threads[id] = [];
     }
-    fs.writeFileSync(`${__dirname}/data/messages.json`, JSON.stringify(messages), 'utf8');
+    fs.writeFileSync(`${__dirname}/data/threads.json`, JSON.stringify(threads), 'utf8');
     return next();
   }
   catch (e) { next(e) }
 }
-app.use('/img', processMessage, express.static(`${__dirname}/img.jpg`));
-const registerClient = (req, res, next) => {
-  try {
-    let knownClients = JSON.parse(fs.readFileSync(`${__dirname}/data/knownClients.json`, 'utf8'));
-    const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-    const userAgent = parseUserAgent(req.headers['user-agent']);
-    knownClients[ip] = { userAgent, lastRegister: new Date(Date.now()).toISOString() };
-    fs.writeFileSync(`${__dirname}/data/knownClients.json`, JSON.stringify(knownClients), 'utf8');
-  }
-  catch (e) { next(e) }
+
+const register = async (req, res, next) => {
+  const { id } = req.query;
+  const timestamp = new Date(Date.now());
+  setTimeout((threadId, timestamp) => {
+    try {
+      const threads = JSON.parse(fs.readFileSync(`${__dirname}/data/threads.json`, 'utf8'));
+      if (threads[id] && threads[id].length) {
+        const length = threads[id].length;
+        const lastView = threads[id][length - 1];
+        const lastViewTimestamp = new Date(lastView.timestamp);
+        const sinceRegister = Math.abs(registerTimestamp - lastViewTimestamp) / 1000;
+        //if the last timestamp was less than 10 seconds since the last register call, remove it
+        if (sinceRegister < 10) threads[id].pop();
+        fs.writeFileSync(`${__dirname}/data/threads.json`, JSON.stringify(threads), 'utf8');
+      }
+    }
+    catch (e) { next(e) }
+  }, 5000);
   return next();
 }
-app.use('/register', registerClient, (req, res) => res.sendStatus(200));
-app.use('/stats', express.static(`${__dirname}/data/messages.json`));
+
+app.use('/img', processMessage, express.static(`${__dirname}/img.jpg`));
+app.use('/register', register, (req, res) => res.sendStatus(200));
+app.use('/stats', (req, res) => {
+  const { id } = req.query;
+  const threads = JSON.parse(fs.readFileSync(`${__dirname}/data/threads.json`, 'utf8'));
+  const threadViews = threads[id];
+  if(threadViews && threadViews.length) {
+    const count = threads[id].length;
+    const lastView = threads[id][count - 1];
+    res.json({ lastView, count });
+  }
+  else res.json([]);  
+});
 app.listen(port);
 logger.info(`Gmail tracking server running on port ${port}`);
