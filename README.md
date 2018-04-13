@@ -28,10 +28,18 @@ Whenever the e-mail is opened, the browser will attempt to fetch the image from 
 
 `docker run --name gmail-tracking -d -p 3189:3189 -v /docker/gmail_tracking/data/:/server/data gmail-tracking`
 
+`cd server/data`
+
+`echo "{}" > threads.json`
+
 ## Run with latest NodeJS
 
 `yarn install`
 
+`cd server/data`
+
+`echo "{}" > threads.json`
+
 `npm start`
 
-*Note: Make sure to create messages.json and knownClients.json in your mounted data directory, or <app_path>/server/data if running natively. At least until I get around to adding them to the Dockerfile.
+
