@@ -45,7 +45,7 @@ const processMessage = (req, res, next) => {
 const register = async (req, res, next) => {
   const { id } = req.query;
   const timestamp = new Date(Date.now());
-  setTimeout((id, timestamp) => {
+  setTimeout(() => {
     try {
       const threads = JSON.parse(fs.readFileSync(`${__dirname}/data/threads.json`, 'utf8'));
       if (threads[id] && threads[id].length) {
